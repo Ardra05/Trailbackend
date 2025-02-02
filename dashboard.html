@@ -203,6 +203,34 @@
         }
 
         updatePoints();
+
+        function resetSelectionsForNewUser(username) {
+            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+            let lastLoginData = JSON.parse(localStorage.getItem("lastLogin")) || {};
+
+             if (lastLoginData.username !== username || lastLoginData.date !== today) {
+                localStorage.setItem("selections", JSON.stringify({})); // Reset selections
+                localStorage.setItem("lastLogin", JSON.stringify({ username, date: today })); // Store new login
+             }
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+
+        const users = JSON.parse(localStorage.getItem('users')) || [];
+        const user = users.find(user => user.username === username && user.password === password);
+
+        if (user) {
+            resetSelectionsForNewUser(username); // Reset selections if it's a new login
+            alert('Login successful!');
+            window.location.href = "dashboard.html";
+        } else {
+            document.getElementById('loginErrorMessage').textContent = 'Invalid username or password.';
+        }
+    });
     </script>
 </body>
 </html>
