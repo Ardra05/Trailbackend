@@ -74,14 +74,6 @@
             border-radius: 5px;
             display: none;
         }
-        .box:nth-child(1) { background-color: #ff5733; }
-        .box:nth-child(2) { background-color: #33ff57; }
-        .box:nth-child(3) { background-color: #3357ff; }
-        .box:nth-child(4) { background-color: #ff33a8; }
-        .box:nth-child(5) { background-color: #ffbd33; }
-        .box:nth-child(6) { background-color: #33d4ff; }
-        .box:nth-child(7) { background-color: #8d33ff; }
-        .box:nth-child(8) { background-color: #57ff33; }
     </style>
 </head>
 <body>
@@ -104,67 +96,63 @@
         const data = {
             "Travel & Transportation": [
                 { action: "Walked or cycled", points: 1 },
-                { action: "Used public transport", points: 2 },
-                { action: "Carpooled or rideshared", points: 3 },
-                { action: "Turned off engine when idling", points: 1 },
-                { action: "Used an electric/hybrid vehicle", points: 3 }
+                { action: "Used public transport", points: 2 }
             ],
             "Home & Energy Use": [
                 { action: "Turned off lights and devices", points: 1 },
-                { action: "Used LED bulbs", points: 2 },
-                { action: "Reduced AC/heating use", points: 2 },
-                { action: "Ventilated naturally", points: 1 }
-            ],
-            "Food & Diet": [
-                { action: "Ate plant-based meals", points: 3 },
-                { action: "Used reusable bags and bottles", points: 1 },
-                { action: "Reduced food waste", points: 2 },
-                { action: "Avoided packaged drinks", points: 1 }
-            ],
-            "Workplace & Study": [
-                { action: "Used digital notes", points: 1 },
-                { action: "Printed only when needed", points: 1 },
-                { action: "Turned off devices", points: 1 },
-                { action: "Used a reusable mug", points: 1 },
-            ],
-            "Waste Management": [
-                { action: "Recycled", points: 2 },
-                { action: "Avoided single-use plastics", points: 2 },
-                { action: "Reused or upcycled items", points: 3 },
-            ],
-            "Water Conservation": [
-                { action: "Took short showers", points: 2 },
-                { action: "Fixed leaks or turned off taps", points: 1 },
-                { action: "Used water-efficient fixtures", points: 2 },
-            ],
-            "Nature & Outdoor Activities": [
-                { action: "Planted a tree or cared for plants", points: 3 },
-                { action: "Participated in clean-ups", points: 2 },
-                { action: "Used eco-friendly products", points: 2 },
-            ],
-           "Shopping & Consumption": [
-                { action: "Bought second-hand", points: 2 },
-                { action: "Chose minimal packaging", points: 2 },
-                { action: "Supported sustainable brands", points: 3 },
-                { action: "Used a reusable shopping bag", points: 1 },
+                { action: "Used LED bulbs", points: 2 }
             ]
         };
 
+        function getCurrentUser() {
+            return localStorage.getItem("currentUser");
+        }
+
+        function setCurrentUser(username) {
+            localStorage.setItem("currentUser", username);
+        }
+
+        function getLastLoginDate(username) {
+            return localStorage.getItem(lastLogin_${username});
+        }
+
+        function setLastLoginDate(username) {
+            localStorage.setItem(lastLogin_${username}, new Date().toISOString().split('T')[0]);
+        }
+
+        function isNewDayForUser(username) {
+            const lastLoginDate = getLastLoginDate(username);
+            const today = new Date().toISOString().split('T')[0];
+            return lastLoginDate !== today;
+        }
+
+        function resetSelectionsForUser(username) {
+            localStorage.removeItem(selections_${username});
+            localStorage.removeItem(dailyPoints_${username});
+        }
+
         function saveSelection(category, action, isChecked) {
-            let selections = JSON.parse(localStorage.getItem("selections")) || {};
+            const username = getCurrentUser();
+            if (!username) return;
+
+            let selections = JSON.parse(localStorage.getItem(selections_${username})) || {};
             if (!selections[category]) {
                 selections[category] = {};
             }
             selections[category][action] = isChecked;
-            localStorage.setItem("selections", JSON.stringify(selections));
+            localStorage.setItem(selections_${username}, JSON.stringify(selections));
             updatePoints();
         }
 
         function loadSelections() {
-            return JSON.parse(localStorage.getItem("selections")) || {};
+            const username = getCurrentUser();
+            return JSON.parse(localStorage.getItem(selections_${username})) || {};
         }
 
         function updatePoints() {
+            const username = getCurrentUser();
+            if (!username) return;
+
             let selections = loadSelections();
             let totalPoints = 0;
 
@@ -176,19 +164,18 @@
                 }
             }
 
+            localStorage.setItem(dailyPoints_${username}, totalPoints);
             let pointsBox = document.getElementById("points-box");
-            pointsBox.textContent = `You have earned ${totalPoints} points!`; 
+            pointsBox.textContent = You have earned ${totalPoints} points!;
             pointsBox.style.display = totalPoints > 0 ? "block" : "none";
         }
 
         function showInfo(category) {
-            console.log("Showing info for:", category); // Debugging line
             const infoBox = document.getElementById('info');
             const selections = loadSelections();
 
-            infoBox.innerHTML = `
-                <h3>${category}</h3>
-                ${data[category].map(item => {
+            infoBox.innerHTML = <h3>${category}</h3> +
+                data[category].map(item => {
                     const checked = selections[category]?.[item.action] ? "checked" : "";
                     return `
                         <label>
@@ -196,41 +183,21 @@
                             ${item.action} (${item.points} pts)
                         </label>
                     `;
-                }).join('')}
-            `;
-            
+                }).join('');
+
             infoBox.style.display = 'block';
         }
 
+        function handleUserLogin(username) {
+            setCurrentUser(username);
+            if (isNewDayForUser(username)) {
+                resetSelectionsForUser(username);
+            }
+            setLastLoginDate(username);
+            updatePoints();
+        }
+
         updatePoints();
-
-        function resetSelectionsForNewUser(username) {
-            const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-            let lastLoginData = JSON.parse(localStorage.getItem("lastLogin")) || {};
-
-             if (lastLoginData.username !== username || lastLoginData.date !== today) {
-                localStorage.setItem("selections", JSON.stringify({})); // Reset selections
-                localStorage.setItem("lastLogin", JSON.stringify({ username, date: today })); // Store new login
-             }
-        }
-
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-
-        const users = JSON.parse(localStorage.getItem('users')) || [];
-        const user = users.find(user => user.username === username && user.password === password);
-
-        if (user) {
-            resetSelectionsForNewUser(username); // Reset selections if it's a new login
-            alert('Login successful!');
-            window.location.href = "dashboard.html";
-        } else {
-            document.getElementById('loginErrorMessage').textContent = 'Invalid username or password.';
-        }
-    });
     </script>
 </body>
 </html>
